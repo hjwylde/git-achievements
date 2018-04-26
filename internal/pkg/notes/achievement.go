@@ -8,3 +8,9 @@ type Achievement struct {
 	Name  string
 	Match func(git.Commit) (bool, error)
 }
+
+func (this Achievement) NewProgress() Progress {
+	return Progress{
+		Ok: true,
+	}
+}

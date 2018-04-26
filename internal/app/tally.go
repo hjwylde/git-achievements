@@ -5,8 +5,6 @@ import "flag"
 import "github.com/hjwylde/git-achievements/internal/pkg/git"
 import "github.com/hjwylde/git-achievements/internal/pkg/groups"
 import "github.com/hjwylde/git-achievements/internal/pkg/notes"
-import "os/exec"
-import "strings"
 
 var tallyCmd = &Command{
 	Run: runTallyCmd,
@@ -17,27 +15,27 @@ var tallyFlagSet = flag.NewFlagSet("tally", flag.ExitOnError)
 func runTallyCmd(args []string) error {
 	tallyFlagSet.Parse(args)
 
-	cmd := exec.Command("git", "rev-list", "head")
+	err := tallyProgress()
 
-	output, err := cmd.Output()
+	return err
+}
+
+func tallyProgress() error {
+	revisions, err := listRevisions("head")
 	if err != nil {
 		return err
 	}
 
-	for _, sha := range strings.Fields(string(output)) {
-		cmd := exec.Command("git", "notes", "--ref=achievements/progress", "remove", "--ignore-missing", sha)
+	for _, achievement := range groups.All {
+		ref := notes.AchievementProgressRef(achievement)
 
-		err := cmd.Run()
-		if err != nil {
-			return err
-		}
+		for _, sha := range revisions {
+			commit := git.Commit{
+				Sha: sha,
+			}
 
-		commit := git.Commit{
-			Sha: sha,
-		}
+			err = tally(commit, achievement, ref)
 
-		for _, achievement := range groups.All {
-			err = tally(commit, achievement)
 			if err != nil {
 				return err
 			}
@@ -47,27 +45,19 @@ func runTallyCmd(args []string) error {
 	return nil
 }
 
-func tally(commit git.Commit, achievement notes.Achievement) error {
+func tally(commit git.Commit, achievement notes.Achievement, ref string) error {
 	if ok, err := achievement.Match(commit); !ok || err != nil {
 		return err
 	}
 
-	progress := &notes.Progress{
-		Group: achievement.Group,
-		Code:  achievement.Code,
-	}
+	progress := achievement.NewProgress()
 
 	b, err := json.Marshal(progress)
 	if err != nil {
 		return err
 	}
 
-	cmd := exec.Command("git", "notes", "--ref=achievements/progress", "append", "-m", string(b), commit.Sha)
+	err = addNote(string(b), commit.Sha, ref)
 
-	err = cmd.Run()
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return err
 }
