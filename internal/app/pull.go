@@ -19,8 +19,7 @@ func pull() error {
 
 	ref := notes.BaseRef
 
-	err = gexec.Fetch(remote, "refs/notes/"+ref+"/*")
-	if err != nil {
+	if err = gexec.Fetch(remote, "refs/notes/"+ref+"/*"); err != nil {
 		return err
 	}
 

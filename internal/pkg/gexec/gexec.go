@@ -81,7 +81,7 @@ func GetPushRemote() (string, error) {
 func GetProgress(ref string) (map[git.Commit]notes.Progress, error) {
 	log.Printf("GetProgress(%s)\n", ref)
 
-	cmd := exec.Command("git", "log", "--format=%H %aD %N", "--notes="+ref)
+	cmd := exec.Command("git", "log", "--format=%H	%aD	%N", "--notes="+ref)
 
 	b, err := cmd.Output()
 	if err != nil {
@@ -94,7 +94,7 @@ func GetProgress(ref string) (map[git.Commit]notes.Progress, error) {
 			continue
 		}
 
-		fields := strings.Fields(line)
+		fields := strings.Split(line, "	")
 
 		authorDate, err := time.Parse(time.RFC1123Z, fields[1])
 		if err != nil {

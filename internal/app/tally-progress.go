@@ -43,8 +43,7 @@ func tallyProgress() error {
 				return err
 			}
 
-			err = gexec.AddNote(string(b), commit.Sha, ref)
-			if err != nil {
+			if err = gexec.AddNote(string(b), commit.Sha, ref); err != nil {
 				return err
 			}
 		}

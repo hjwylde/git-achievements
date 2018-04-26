@@ -34,7 +34,7 @@ func tallyUnlocked() error {
 		})
 
 		for i, commit := range commits {
-			if !achievement.IsUnlocked(i) {
+			if !achievement.IsUnlocked(i + 1) {
 				continue
 			}
 
@@ -47,8 +47,7 @@ func tallyUnlocked() error {
 
 			unlockedRef := notes.AchievementUnlockedRef(achievement)
 
-			err = gexec.AddNote(string(b), commit.Sha, unlockedRef)
-			if err != nil {
+			if err = gexec.AddNote(string(b), commit.Sha, unlockedRef); err != nil {
 				return err
 			}
 

@@ -10,8 +10,7 @@ var tallyCmd = &Command{
 }
 
 func tally() error {
-	err := tallyProgress()
-	if err != nil {
+	if err := tallyProgress(); err != nil {
 		return err
 	}
 
