@@ -1,10 +1,10 @@
-package app
+package gexec
 
 import "log"
 import "os/exec"
 import "strings"
 
-func addNote(message string, sha string, ref string) error {
+func AddNote(message string, sha string, ref string) error {
 	log.Printf("addNote(%s, %s, %s)\n", message, sha, ref)
 
 	cmd := exec.Command("git", "notes", "--ref="+ref, "add", "-f", "-m", message, sha)
@@ -14,7 +14,7 @@ func addNote(message string, sha string, ref string) error {
 	return err
 }
 
-func fetch(remote string, ref string) error {
+func Fetch(remote string, ref string) error {
 	log.Printf("fetch(%s, %s)\n", remote, ref)
 
 	cmd := exec.Command("git", "fetch", remote, ref)
@@ -29,17 +29,17 @@ func getBranch() (string, error) {
 
 	cmd := exec.Command("git", "rev-parse", "--abbrev-head", "--symbolic-full-name", "head")
 
-	output, err := cmd.Output()
+	b, err := cmd.Output()
 
-	return string(output), err
+	return string(b), err
 }
 
-func getUpstreamRemote() (string, error) {
+func GetUpstreamRemote() (string, error) {
 	log.Printf("getUpstreamRemote()\n")
 
 	cmd := exec.Command("git", "rev-parse", "--abbrev-head", "--symbolic-full-name", "@{u}")
 
-	output, err := cmd.Output()
+	b, err := cmd.Output()
 	if err != nil {
 		return "", err
 	}
@@ -49,17 +49,17 @@ func getUpstreamRemote() (string, error) {
 		return "", err
 	}
 
-	remote := strings.TrimSuffix(string(output), "/"+branch)
+	remote := strings.TrimSuffix(string(b), "/"+branch)
 
 	return remote, nil
 }
 
-func getPushRemote() (string, error) {
+func GetPushRemote() (string, error) {
 	log.Printf("getPushRemote()\n")
 
 	cmd := exec.Command("git", "rev-parse", "--abbrev-head", "--symbolic-full-name", "@{push}")
 
-	output, err := cmd.Output()
+	b, err := cmd.Output()
 	if err != nil {
 		return "", err
 	}
@@ -69,24 +69,41 @@ func getPushRemote() (string, error) {
 		return "", err
 	}
 
-	remote := strings.TrimSuffix(string(output), "/"+branch)
+	remote := strings.TrimSuffix(string(b), "/"+branch)
 
 	return remote, nil
 }
 
-func listRevisions(ref string) ([]string, error) {
+func ListNotes(ref string) ([]string, error) {
+	log.Printf("listNotes(%s)\n", ref)
+
+	cmd := exec.Command("git", "log", "--format=%N", "--notes="+ref)
+
+	b, err := cmd.Output()
+	if err != nil {
+		return nil, err
+	}
+
+	notes := strings.Fields(
+		strings.Replace(string(b), "\n\n", "\n", -1),
+	)
+
+	return notes, nil
+}
+
+func ListRevisions(ref string) ([]string, error) {
 	log.Printf("listRevisions(%s)\n", ref)
 
 	cmd := exec.Command("git", "rev-list", ref)
 
-	output, err := cmd.Output()
+	b, err := cmd.Output()
 
-	revisions := strings.Fields(string(output))
+	revisions := strings.Fields(string(b))
 
 	return revisions, err
 }
 
-func mergeNotes(remote string, ref string) error {
+func MergeNotes(remote string, ref string) error {
 	log.Printf("mergeNotes(%s, %s)\n", remote, ref)
 
 	cmd := exec.Command("git", "notes", "merge", "-s cat_sort_uniq", remote+"/"+ref)
@@ -96,7 +113,7 @@ func mergeNotes(remote string, ref string) error {
 	return err
 }
 
-func pruneNotes(ref string) error {
+func PruneNotes(ref string) error {
 	log.Printf("pruneNotes(%s)\n", ref)
 
 	cmd := exec.Command("git", "notes", "--ref="+ref, "prune")
@@ -106,7 +123,7 @@ func pruneNotes(ref string) error {
 	return err
 }
 
-func push(remote string, ref string) error {
+func Push(remote string, ref string) error {
 	log.Printf("push(%s, %s)\n", remote, ref)
 
 	cmd := exec.Command("git", "push", remote, ref)

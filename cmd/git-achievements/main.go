@@ -42,7 +42,10 @@ func main() {
 		os.Exit(2)
 	}
 
-	if err := subcommand.Run(os.Args[2:]); err != nil {
+	flagSet := subcommand.FlagSet
+	flagSet.Parse(os.Args[2:])
+
+	if err := subcommand.Run(flagSet); err != nil {
 		log.Fatal(err)
 	}
 }

@@ -14,4 +14,5 @@ var firstCommit = notes.Achievement{
 	Match: func(_ git.Commit) (bool, error) {
 		return true, nil
 	},
+	Count: 1,
 }

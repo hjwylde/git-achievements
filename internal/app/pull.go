@@ -1,30 +1,30 @@
 package app
 
 import "flag"
+import "github.com/hjwylde/git-achievements/internal/pkg/gexec"
 import "github.com/hjwylde/git-achievements/internal/pkg/notes"
 
 var pullCmd = &Command{
-	Run: runPullCmd,
+	FlagSet: flag.NewFlagSet("pull", flag.ExitOnError),
+	Run: func(flagSet *flag.FlagSet) error {
+		return pull()
+	},
 }
 
-var pullFlagSet = flag.NewFlagSet("pull", flag.ExitOnError)
-
-func runPullCmd(args []string) error {
-	pullFlagSet.Parse(args)
-
-	remote, err := getUpstreamRemote()
+func pull() error {
+	remote, err := gexec.GetUpstreamRemote()
 	if err != nil {
 		return err
 	}
 
 	ref := notes.BaseRef
 
-	err = fetch(remote, "refs/notes/"+ref+"/*")
+	err = gexec.Fetch(remote, "refs/notes/"+ref+"/*")
 	if err != nil {
 		return err
 	}
 
-	err = mergeNotes(remote, ref+"/*")
+	err = gexec.MergeNotes(remote, ref+"/*")
 
 	return err
 }

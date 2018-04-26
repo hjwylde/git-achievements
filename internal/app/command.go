@@ -1,5 +1,8 @@
 package app
 
+import "flag"
+
 type Command struct {
-	Run func([]string) error
+	FlagSet *flag.FlagSet
+	Run     func(*flag.FlagSet) error
 }

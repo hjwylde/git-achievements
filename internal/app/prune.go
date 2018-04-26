@@ -1,20 +1,20 @@
 package app
 
 import "flag"
+import "github.com/hjwylde/git-achievements/internal/pkg/gexec"
 import "github.com/hjwylde/git-achievements/internal/pkg/notes"
 
 var pruneCmd = &Command{
-	Run: runPruneCmd,
+	FlagSet: flag.NewFlagSet("prune", flag.ExitOnError),
+	Run: func(flagSet *flag.FlagSet) error {
+		return prune()
+	},
 }
 
-var pruneFlagSet = flag.NewFlagSet("prune", flag.ExitOnError)
-
-func runPruneCmd(args []string) error {
-	pruneFlagSet.Parse(args)
-
+func prune() error {
 	ref := notes.ProgressRef
 
-	err := pruneNotes(ref)
+	err := gexec.PruneNotes(ref)
 
 	return err
 }
