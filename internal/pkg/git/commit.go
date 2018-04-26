@@ -1,5 +1,8 @@
 package git
 
+import "time"
+
 type Commit struct {
-	Sha string
+	Sha        string
+	AuthorDate time.Time
 }

@@ -1,11 +1,15 @@
 package gexec
 
+import "encoding/json"
+import "github.com/hjwylde/git-achievements/internal/pkg/git"
+import "github.com/hjwylde/git-achievements/internal/pkg/notes"
 import "log"
 import "os/exec"
 import "strings"
+import "time"
 
 func AddNote(message string, sha string, ref string) error {
-	log.Printf("addNote(%s, %s, %s)\n", message, sha, ref)
+	log.Printf("AddNote(%s, %s, %s)\n", message, sha, ref)
 
 	cmd := exec.Command("git", "notes", "--ref="+ref, "add", "-f", "-m", message, sha)
 
@@ -15,7 +19,7 @@ func AddNote(message string, sha string, ref string) error {
 }
 
 func Fetch(remote string, ref string) error {
-	log.Printf("fetch(%s, %s)\n", remote, ref)
+	log.Printf("Fetch(%s, %s)\n", remote, ref)
 
 	cmd := exec.Command("git", "fetch", remote, ref)
 
@@ -35,7 +39,7 @@ func getBranch() (string, error) {
 }
 
 func GetUpstreamRemote() (string, error) {
-	log.Printf("getUpstreamRemote()\n")
+	log.Printf("GetUpstreamRemote()\n")
 
 	cmd := exec.Command("git", "rev-parse", "--abbrev-head", "--symbolic-full-name", "@{u}")
 
@@ -55,7 +59,7 @@ func GetUpstreamRemote() (string, error) {
 }
 
 func GetPushRemote() (string, error) {
-	log.Printf("getPushRemote()\n")
+	log.Printf("GetPushRemote()\n")
 
 	cmd := exec.Command("git", "rev-parse", "--abbrev-head", "--symbolic-full-name", "@{push}")
 
@@ -74,25 +78,47 @@ func GetPushRemote() (string, error) {
 	return remote, nil
 }
 
-func ListNotes(ref string) ([]string, error) {
-	log.Printf("listNotes(%s)\n", ref)
+func GetProgress(ref string) (map[git.Commit]notes.Progress, error) {
+	log.Printf("GetProgress(%s)\n", ref)
 
-	cmd := exec.Command("git", "log", "--format=%N", "--notes="+ref)
+	cmd := exec.Command("git", "log", "--format=%H %aD %N", "--notes="+ref)
 
 	b, err := cmd.Output()
 	if err != nil {
 		return nil, err
 	}
 
-	notes := strings.Fields(
-		strings.Replace(string(b), "\n\n", "\n", -1),
-	)
+	m := make(map[git.Commit]notes.Progress)
+	for _, line := range strings.Split(string(b), "\n") {
+		if len(line) == 0 {
+			continue
+		}
 
-	return notes, nil
+		fields := strings.Fields(line)
+
+		authorDate, err := time.Parse(time.RFC1123Z, fields[1])
+		if err != nil {
+			return nil, err
+		}
+
+		commit := git.Commit{
+			Sha:        fields[0],
+			AuthorDate: authorDate,
+		}
+
+		var progress notes.Progress
+		if err = json.Unmarshal([]byte(fields[2]), &progress); err != nil {
+			return nil, err
+		}
+
+		m[commit] = progress
+	}
+
+	return m, nil
 }
 
 func ListRevisions(ref string) ([]string, error) {
-	log.Printf("listRevisions(%s)\n", ref)
+	log.Printf("ListRevisions(%s)\n", ref)
 
 	cmd := exec.Command("git", "rev-list", ref)
 
@@ -104,7 +130,7 @@ func ListRevisions(ref string) ([]string, error) {
 }
 
 func MergeNotes(remote string, ref string) error {
-	log.Printf("mergeNotes(%s, %s)\n", remote, ref)
+	log.Printf("MergeNotes(%s, %s)\n", remote, ref)
 
 	cmd := exec.Command("git", "notes", "merge", "-s cat_sort_uniq", remote+"/"+ref)
 
@@ -114,7 +140,7 @@ func MergeNotes(remote string, ref string) error {
 }
 
 func PruneNotes(ref string) error {
-	log.Printf("pruneNotes(%s)\n", ref)
+	log.Printf("PruneNotes(%s)\n", ref)
 
 	cmd := exec.Command("git", "notes", "--ref="+ref, "prune")
 
@@ -124,7 +150,7 @@ func PruneNotes(ref string) error {
 }
 
 func Push(remote string, ref string) error {
-	log.Printf("push(%s, %s)\n", remote, ref)
+	log.Printf("Push(%s, %s)\n", remote, ref)
 
 	cmd := exec.Command("git", "push", remote, ref)
 

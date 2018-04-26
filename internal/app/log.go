@@ -10,5 +10,5 @@ var logCmd = &Command{
 }
 
 func log() error {
-    return nil
+	return nil
 }

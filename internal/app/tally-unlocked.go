@@ -3,8 +3,10 @@ package app
 import "encoding/json"
 import "flag"
 import "github.com/hjwylde/git-achievements/internal/pkg/gexec"
+import "github.com/hjwylde/git-achievements/internal/pkg/git"
 import "github.com/hjwylde/git-achievements/internal/pkg/groups"
 import "github.com/hjwylde/git-achievements/internal/pkg/notes"
+import "sort"
 
 var tallyUnlockedCmd = &Command{
 	FlagSet: flag.NewFlagSet("tally-unlocked", flag.ExitOnError),
@@ -17,29 +19,40 @@ func tallyUnlocked() error {
 	for _, achievement := range groups.All {
 		progressRef := notes.AchievementProgressRef(achievement)
 
-		output, err := gexec.ListNotes(progressRef)
+		progressByCommit, err := gexec.GetProgress(progressRef)
 		if err != nil {
 			return err
 		}
 
-		progress := len(output)
-
-		if ok := achievement.IsUnlocked(progress); !ok {
-			continue
+		commits := make([]git.Commit, 0, len(progressByCommit))
+		for commit := range progressByCommit {
+			commits = append(commits, commit)
 		}
 
-		unlocked := achievement.NewUnlocked()
+		sort.Slice(commits, func(i, j int) bool {
+			return commits[i].AuthorDate.Before(commits[j].AuthorDate)
+		})
 
-		b, err := json.Marshal(unlocked)
-		if err != nil {
-			return err
-		}
+		for i, commit := range commits {
+			if !achievement.IsUnlocked(i) {
+				continue
+			}
 
-		unlockedRef := notes.AchievementUnlockedRef(achievement)
+			unlocked := achievement.NewUnlocked()
 
-		err = gexec.AddNote(string(b), "head", unlockedRef)
-		if err != nil {
-			return err
+			b, err := json.Marshal(unlocked)
+			if err != nil {
+				return err
+			}
+
+			unlockedRef := notes.AchievementUnlockedRef(achievement)
+
+			err = gexec.AddNote(string(b), commit.Sha, unlockedRef)
+			if err != nil {
+				return err
+			}
+
+			break
 		}
 	}
 
