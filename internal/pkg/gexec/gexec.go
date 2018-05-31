@@ -58,26 +58,6 @@ func GetUpstreamRemote() (string, error) {
 	return remote, nil
 }
 
-func GetPushRemote() (string, error) {
-	log.Printf("GetPushRemote()\n")
-
-	cmd := exec.Command("git", "rev-parse", "--abbrev-head", "--symbolic-full-name", "@{push}")
-
-	b, err := cmd.Output()
-	if err != nil {
-		return "", err
-	}
-
-	branch, err := getBranch()
-	if err != nil {
-		return "", err
-	}
-
-	remote := strings.TrimSuffix(string(b), "/"+branch)
-
-	return remote, nil
-}
-
 func GetProgress(ref string) (map[git.Commit]notes.Progress, error) {
 	log.Printf("GetProgress(%s)\n", ref)
 
@@ -112,6 +92,65 @@ func GetProgress(ref string) (map[git.Commit]notes.Progress, error) {
 		}
 
 		m[commit] = progress
+	}
+
+	return m, nil
+}
+
+func GetPushRemote() (string, error) {
+	log.Printf("GetPushRemote()\n")
+
+	cmd := exec.Command("git", "rev-parse", "--abbrev-head", "--symbolic-full-name", "@{push}")
+
+	b, err := cmd.Output()
+	if err != nil {
+		return "", err
+	}
+
+	branch, err := getBranch()
+	if err != nil {
+		return "", err
+	}
+
+	remote := strings.TrimSuffix(string(b), "/"+branch)
+
+	return remote, nil
+}
+
+func GetUnlocked(ref string) (map[git.Commit]notes.Unlocked, error) {
+	log.Printf("GetUnlocked(%s)\n", ref)
+
+	cmd := exec.Command("git", "log", "--format=%H	%aD	%N", "--notes="+ref)
+
+	b, err := cmd.Output()
+	if err != nil {
+		return nil, err
+	}
+
+	m := make(map[git.Commit]notes.Unlocked)
+	for _, line := range strings.Split(string(b), "\n") {
+		if len(line) == 0 {
+			continue
+		}
+
+		fields := strings.Split(line, "	")
+
+		authorDate, err := time.Parse(time.RFC1123Z, fields[1])
+		if err != nil {
+			return nil, err
+		}
+
+		commit := git.Commit{
+			Sha:        fields[0],
+			AuthorDate: authorDate,
+		}
+
+		var unlocked notes.Unlocked
+		if err = json.Unmarshal([]byte(fields[2]), &unlocked); err != nil {
+			return nil, err
+		}
+
+		m[commit] = unlocked
 	}
 
 	return m, nil
